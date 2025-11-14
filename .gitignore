@@ -12,8 +12,8 @@ __pycache__/
 
 # Exclude build artifacts
 build/
-dist/
-*.spec
+# dist/
+#*.spec
 *.egg-info/
 
 # Exclude IDE files
