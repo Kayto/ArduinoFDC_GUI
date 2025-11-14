@@ -1,0 +1,62 @@
+# Exclude Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Exclude Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Exclude build artifacts
+build/
+dist/
+*.spec
+*.egg-info/
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Exclude backup files
+*.bak
+*.tmp
+*~
+
+# Exclude log files
+*.log
+
+# Exclude development files
+test_*.py
+debug_*.py
+
+# Exclude common archive files
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+*.tbz2
+*.tar.xz
+*.txz
+*.gz
+*.bz2
+*.xz
+*.iso
+*.img
+*.dmg
+*.pkg
+*.deb
+*.rpm
