@@ -2,6 +2,9 @@
 
 A graphical user interface for controlling the [ArduinoFDC](https://github.com/dhansel/ArduinoFDC) floppy disk controller by David Hansel.
 
+![ArduinoFDC GUI Screenshot](images/gui_screenshot.png)
+*Main interface showing ArduDOS mode with file browser and XModem transfer options*
+
 ## Overview
 
 This GUI provides an easy-to-use interface for interacting with ArduinoFDC, allowing you to:

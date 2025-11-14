@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Arduino FDC GUI - Graphical interface for Arduino Floppy Disk Controller
-Connects to (Default) COM4 at 115200 baud with CR line termination and no local echo
+Connects to COM4 at 115200 baud with CR line termination and no local echo
 """
 
 import os
