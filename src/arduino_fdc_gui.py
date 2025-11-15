@@ -1320,12 +1320,12 @@ class ArduinoFDCGUI:
             messagebox.showinfo("Copied", "File content copied to clipboard!", parent=viewer)
         
         def save_to_file():
-            file_path = tk.filedialog.asksaveasfilename(
+            file_path = filedialog.asksaveasfilename(
                 parent=viewer,
                 title="Save File Content",
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-                initialname=self.file_content_filename
+                initialfile=self.file_content_filename
             )
             if file_path:
                 try:
