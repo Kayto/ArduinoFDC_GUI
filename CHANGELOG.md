@@ -57,18 +57,18 @@ All notable changes to the ArduinoFDC GUI project will be documented in this fil
 - Python 3.12.5
 - PyInstaller 6.16.0
 - Dependencies: pyserial 3.5, xmodem 0.4.7
-- Source code: 2389 lines
+- Source code: 2389 lines, approx!
 - Build target: Windows 10/11
 
 ### Known Issues
-- None at this time
+- Blocking needs resolution to avoid disk change detection errors. This corrupts outputs. Current resolution is don't rush. Wait for the motor to stop between commands.
+- The GUI is OK but need to bother to fix the sizing and forced widths.
 
 ### Future Considerations
 - Additional disk format support (if needed)
 - Batch file operations
 - Disk image format conversion tools
 - Configuration file for persistent settings
-- Multiple language support
 
 ---
 
