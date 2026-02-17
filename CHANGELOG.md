@@ -2,6 +2,17 @@
 
 All notable changes to the ArduinoFDC GUI project will be documented in this file.
 
+## [1.0.1] - 2026-02-17
+
+### Added
+- Per-drive disk type tracking - disk type settings are now remembered separately for Drive A: and Drive B:
+
+### Fixed
+- Disk type now correctly restored when switching drives in ArduDOS mode (a:, b:)
+- Disk type now correctly restored when switching drives in Monitor mode (s 0, s 1)
+
+---
+
 ## [1.0.0] - 2025-11-14
 
 ### Added
@@ -57,18 +68,18 @@ All notable changes to the ArduinoFDC GUI project will be documented in this fil
 - Python 3.12.5
 - PyInstaller 6.16.0
 - Dependencies: pyserial 3.5, xmodem 0.4.7
-- Source code: 2389 lines, approx!
+- Source code: 2389 lines
 - Build target: Windows 10/11
 
 ### Known Issues
-- Blocking needs resolution to avoid disk change detection errors. This corrupts outputs. Current resolution is don't rush. Wait for the motor to stop between commands.
-- The GUI is OK but need to bother to fix the sizing and forced widths.
+- None at this time
 
 ### Future Considerations
 - Additional disk format support (if needed)
 - Batch file operations
 - Disk image format conversion tools
 - Configuration file for persistent settings
+- Multiple language support
 
 ---
 

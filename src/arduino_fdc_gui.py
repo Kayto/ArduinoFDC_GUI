@@ -42,6 +42,9 @@ class ArduinoFDCGUI:
         # Drive and disk type tracking for status bar
         self.current_drive = "A:"
         self.current_disk_type = "Unknown"
+        # Per-drive disk type tracking
+        self.drive_a_disk_type = "Unknown"
+        self.drive_b_disk_type = "Unknown"
         
         # File listing cache
         self.current_files = []
@@ -446,10 +449,31 @@ class ArduinoFDCGUI:
                   command=lambda: self.set_disk_type("disktype 1", "5.25\" DD in HD")).grid(row=2, column=0, columnspan=2, padx=3, pady=3)
     
     def set_disk_type(self, command, disk_type_name):
-        """Set disk type and update status bar"""
+        """Set disk type and update status bar (ArduDOS or Monitor)"""
         self.send_cmd(command)
         self.current_disk_type = disk_type_name
+        # Store disk type for current drive
+        if self.current_drive == "A:":
+            self.drive_a_disk_type = disk_type_name
+        else:
+            self.drive_b_disk_type = disk_type_name
         self.status_disktype_var.set(f"Disk Type: {disk_type_name}")
+        self.log(f"Disk type set to {disk_type_name} for {self.current_drive}")
+    
+    def monitor_switch_drive(self, drive_cmd, drive_letter):
+        """Switch drive in Monitor mode and update status bar directly"""
+        self.send_cmd(drive_cmd)
+        self.current_drive = f"{drive_letter}:"
+        self.current_path = ""
+        self.current_dir_var.set(f"{drive_letter}:\\")
+        self.status_drive_var.set(f"Drive: {drive_letter}:")
+        # Restore disk type for the selected drive
+        if drive_letter == "A":
+            self.current_disk_type = self.drive_a_disk_type
+        else:
+            self.current_disk_type = self.drive_b_disk_type
+        self.status_disktype_var.set(f"Disk Type: {self.current_disk_type}")
+        self.log(f"Monitor drive switched to {drive_letter}: (disk type: {self.current_disk_type})")
         
     def setup_monitor_panel(self, parent):
         """Set up Monitor command panel - compact layout"""
@@ -507,8 +531,8 @@ class ArduinoFDCGUI:
         
         ttk.Button(control_frame, text="Motor On", width=9, command=lambda: self.send_cmd("m 1")).grid(row=0, column=0, padx=2, pady=2)
         ttk.Button(control_frame, text="Motor Off", width=9, command=lambda: self.send_cmd("m 0")).grid(row=0, column=1, padx=2, pady=2)
-        ttk.Button(control_frame, text="Drive A", width=9, command=lambda: self.send_cmd("s 0")).grid(row=1, column=0, padx=2, pady=2)
-        ttk.Button(control_frame, text="Drive B", width=9, command=lambda: self.send_cmd("s 1")).grid(row=1, column=1, padx=2, pady=2)
+        ttk.Button(control_frame, text="Drive A", width=9, command=lambda: self.monitor_switch_drive("s 0", "A")).grid(row=1, column=0, padx=2, pady=2)
+        ttk.Button(control_frame, text="Drive B", width=9, command=lambda: self.monitor_switch_drive("s 1", "B")).grid(row=1, column=1, padx=2, pady=2)
         
         # Disk type - compact single row
         type_frame = ttk.LabelFrame(main_frame, text="Drive Type Setting", padding="5")
@@ -524,11 +548,11 @@ class ArduinoFDCGUI:
         # Compact disk type buttons in single row (first 4 buttons)
         for i, (label, cmd) in enumerate(monitor_types):
             ttk.Button(type_frame, text=label, width=10,
-                      command=lambda c=cmd: self.send_cmd(c)).grid(row=0, column=i, padx=2, pady=2)
+                      command=lambda c=cmd, l=label: self.set_disk_type(c, l)).grid(row=0, column=i, padx=2, pady=2)
         
         # Add the "5.25\" DD in HD" button on its own row below
         ttk.Button(type_frame, text="5.25\" DD in HD", width=14,
-                  command=lambda: self.send_cmd("t 1")).grid(row=1, column=0, columnspan=4, padx=2, pady=2)
+                  command=lambda: self.set_disk_type("t 1", '5.25" DD in HD')).grid(row=1, column=0, columnspan=4, padx=2, pady=2)
         
         # Advanced operations - compact
         adv_frame = ttk.LabelFrame(main_frame, text="Advanced", padding="5")
@@ -592,6 +616,8 @@ class ArduinoFDCGUI:
             self.current_drive = "A:"
             self.current_path = ""
             self.current_disk_type = "Unknown"
+            self.drive_a_disk_type = "Unknown"
+            self.drive_b_disk_type = "Unknown"
             self.current_dir_var.set("A:\\")
             self.status_drive_var.set("Drive: A:")
             self.status_disktype_var.set("Disk Type: Unknown")
@@ -617,6 +643,8 @@ class ArduinoFDCGUI:
             self.current_drive = "A:"
             self.current_path = ""
             self.current_disk_type = "Unknown"
+            self.drive_a_disk_type = "Unknown"
+            self.drive_b_disk_type = "Unknown"
             self.current_dir_var.set("A:\\")
             self.status_drive_var.set("Drive: A:")
             self.status_disktype_var.set("Disk Type: Unknown")
@@ -963,14 +991,40 @@ class ArduinoFDCGUI:
                 self.current_path = ""  # Reset to root when changing drives
                 self.current_dir_var.set(f"{drive_letter}:\\")
                 self.status_drive_var.set(f"Drive: {drive_letter}:")
+                # Restore disk type for the selected drive
+                if drive_letter == "A":
+                    self.current_disk_type = self.drive_a_disk_type
+                else:
+                    self.current_disk_type = self.drive_b_disk_type
+                self.status_disktype_var.set(f"Disk Type: {self.current_disk_type}")
                 self.log(f"Drive switch detected - updated status bar to {drive_letter}:")
             
-            # Update status bar for mode switch commands
+            # Update status bar for Monitor mode drive switch commands (s 0 = Drive A, s 1 = Drive B)
+            # Match 's' followed by 0 or 1 with any spacing: s0, s 0, s  0, etc.
+            # No mode check needed - these commands are exclusively for Monitor mode
+            cmd_lower = stripped.lower().replace(' ', '')
+            if cmd_lower in ['s0', 's1']:
+                drive_letter = "A" if cmd_lower == 's0' else "B"
+                self.current_drive = f"{drive_letter}:"
+                self.current_path = ""  # Reset to root when changing drives
+                self.current_dir_var.set(f"{drive_letter}:\\")
+                self.status_drive_var.set(f"Drive: {drive_letter}:")
+                # Restore disk type for the selected drive
+                if drive_letter == "A":
+                    self.current_disk_type = self.drive_a_disk_type
+                else:
+                    self.current_disk_type = self.drive_b_disk_type
+                self.status_disktype_var.set(f"Disk Type: {self.current_disk_type}")
+                self.log(f"Monitor drive switch detected - updated status bar to {drive_letter}:")
+            
+            # Update status bar and internal mode for mode switch commands
             if stripped.lower() == 'monitor':
-                self.status_mode_var.set("Mode: Monitor (switching...)")
+                self.current_mode = "Monitor"
+                self.status_mode_var.set("Mode: Monitor")
                 self.log("Mode switch to Monitor detected")
             elif stripped.lower() == 'x' and self.current_mode == "Monitor":
-                self.status_mode_var.set("Mode: ArduDOS (switching...)")
+                self.current_mode = "ArduDOS"
+                self.status_mode_var.set("Mode: ArduDOS")
                 self.log("Mode switch to ArduDOS detected")
             
             # Update status bar for disk type commands
@@ -984,6 +1038,11 @@ class ArduinoFDCGUI:
             if stripped.lower() in disk_type_map:
                 disk_type_name = disk_type_map[stripped.lower()]
                 self.current_disk_type = disk_type_name
+                # Store disk type for current drive
+                if self.current_drive == "A:":
+                    self.drive_a_disk_type = disk_type_name
+                else:
+                    self.drive_b_disk_type = disk_type_name
                 self.status_disktype_var.set(f"Disk Type: {disk_type_name}")
                 self.log("Disk type command detected - updated status bar to {disk_type_name}")
             
@@ -1796,6 +1855,12 @@ class ArduinoFDCGUI:
         self.current_drive = f"{drive_letter}:"
         self.current_dir_var.set(f"{drive_letter}:\\")
         self.status_drive_var.set(f"Drive: {drive_letter}:")
+        # Restore disk type for the selected drive
+        if drive_letter == "A":
+            self.current_disk_type = self.drive_a_disk_type
+        else:
+            self.current_disk_type = self.drive_b_disk_type
+        self.status_disktype_var.set(f"Disk Type: {self.current_disk_type}")
         # Drive changed - use Refresh button to see new drive contents
             
     # Monitor command helpers
