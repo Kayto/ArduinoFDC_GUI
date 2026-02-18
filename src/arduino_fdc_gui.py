@@ -1170,24 +1170,125 @@ class ArduinoFDCGUI:
                 # Directory removed - use Refresh button to see changes
                 
     def format_disk(self):
-        """Format disk"""
-        if messagebox.askyesno(
-            "Confirm Format", 
-            "This will erase all data on the disk. Continue?",
-            parent=self.root
-        ):
-            self.send_cmd("format")
-            # Disk formatted - use Refresh button to see changes
+        """Format disk with disk type confirmation dialog.
+        
+        The firmware defaults both drives to 3.5" HD on startup.
+        If the physical disk is a different type (e.g. 3.5" DD), the
+        format will fail with 'Low-level disk error' unless the correct
+        disktype is sent first.  This dialog ensures the right type is
+        always configured before formatting.
+        """
+        self._format_disk_with_type_dialog(quick=False)
             
     def quick_format(self):
-        """Quick format disk"""
-        if messagebox.askyesno(
-            "Confirm Quick Format", 
-            "This will erase the file system. Continue?",
-            parent=self.root
-        ):
-            self.send_cmd("format /q")
-            # Disk formatted - use Refresh button to see changes
+        """Quick format disk (filesystem only, no low-level format)"""
+        self._format_disk_with_type_dialog(quick=True)
+    
+    def _format_disk_with_type_dialog(self, quick=False):
+        """Show format dialog with disk type selection, then format."""
+        if not self.connected:
+            messagebox.showwarning("Not Connected",
+                                  "Please connect to Arduino FDC first",
+                                  parent=self.root)
+            return
+        
+        # Build the dialog
+        dialog = tk.Toplevel(self.root)
+        fmt_label = "Quick Format" if quick else "Format"
+        dialog.title(f"{fmt_label} Disk - {self.current_drive}")
+        dialog.geometry("380x280")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.geometry("+%d+%d" % (
+            self.root.winfo_rootx() + 200,
+            self.root.winfo_rooty() + 200
+        ))
+        
+        # Info
+        ttk.Label(dialog, text=f"{fmt_label} disk in drive {self.current_drive}",
+                  font=("Arial", 11, "bold")).pack(pady=(15, 5))
+        ttk.Label(dialog, text="Select the disk type that matches your physical disk.\n"
+                  "Using the wrong type will cause format errors.",
+                  wraplength=340, justify=tk.CENTER).pack(pady=(0, 10))
+        
+        # Disk type radio buttons
+        type_frame = ttk.LabelFrame(dialog, text="Disk Type", padding="8")
+        type_frame.pack(padx=15, fill=tk.X)
+        
+        disk_types = [
+            ('3.5" HD  (1.44 MB)', "disktype 4", '3.5" HD'),
+            ('3.5" DD  (720 KB)',   "disktype 3", '3.5" DD'),
+            ('5.25" HD (1.2 MB)',   "disktype 2", '5.25" HD'),
+            ('5.25" DD (360 KB)',   "disktype 0", '5.25" DD'),
+            ('5.25" DD in HD drive',"disktype 1", '5.25" DD in HD'),
+        ]
+        
+        # Default selection based on current disk type for this drive
+        type_var = tk.StringVar()
+        current = self.current_disk_type
+        default_cmd = "disktype 4"  # fallback to 3.5" HD
+        for label, cmd, name in disk_types:
+            if name == current:
+                default_cmd = cmd
+                break
+        type_var.set(default_cmd)
+        
+        for label, cmd, name in disk_types:
+            ttk.Radiobutton(type_frame, text=label, variable=type_var,
+                            value=cmd).pack(anchor=tk.W)
+        
+        # Buttons
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(pady=(12, 10))
+        
+        def do_format():
+            dialog.destroy()
+            # Determine human-readable name from selection
+            selected_cmd = type_var.get()
+            selected_name = "Unknown"
+            for label, cmd, name in disk_types:
+                if cmd == selected_cmd:
+                    selected_name = name
+                    break
+            
+            # Final confirmation
+            action = "Quick format" if quick else "Format"
+            if not messagebox.askyesno(
+                "Confirm Format",
+                f"{action} disk in drive {self.current_drive} as {selected_name}?\n\n"
+                "This will ERASE ALL DATA on the disk.",
+                parent=self.root
+            ):
+                return
+            
+            # 1) Send disktype command and wait for it to take effect
+            self.set_disk_type(selected_cmd, selected_name)
+            self.log(f"Set disk type to {selected_name} before format")
+            
+            # 2) Brief pause so firmware processes the disktype command
+            time.sleep(0.3)
+            self.root.update()
+            
+            # 3) Send format command (don't wait for prompt - we'll auto-confirm)
+            fmt_cmd = "format /q" if quick else "format"
+            self.send_cmd(fmt_cmd)
+            self.log(f"Sent '{fmt_cmd}' command to firmware")
+            
+            # 4) Schedule auto-confirm "y" after firmware prompts
+            self.root.after(800, self._auto_confirm_format)
+        
+        ttk.Button(btn_frame, text=f"{fmt_label}", command=do_format,
+                   width=14).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=dialog.destroy,
+                   width=10).pack(side=tk.LEFT, padx=5)
+    
+    def _auto_confirm_format(self):
+        """Auto-send 'y' to confirm the firmware's format prompt."""
+        if not self.connected:
+            return
+        self.log("Auto-sending 'y' to confirm firmware format prompt")
+        self.send_cmd("y")
     
     def write_file(self):
         """Write a new file with multi-line input dialog"""
